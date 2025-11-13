@@ -9,13 +9,13 @@ const BlogEditPage = () => {
 
   const [formData, setFormData] = useState({
     title: "",
-    description: "",
     content: "",
     thumbnail: "",
     slug: "",
     isBestForYou: false,
     isPublished: false,
   })
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
 
   const [loading, setLoading] = useState(!isCreate)
   const [saving, setSaving] = useState(false)
@@ -55,14 +55,33 @@ const BlogEditPage = () => {
     try {
       const url = isCreate ? "/admin/blog" : `/admin/blog/${id}`
       
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(formData),
-      })
+      let response: Response
+
+      if (thumbnailFile) {
+        const fd = new FormData()
+        fd.append("thumbnail", thumbnailFile)
+        // append other fields
+        fd.append("title", formData.title || "")
+        fd.append("content", formData.content || "")
+        fd.append("slug", formData.slug || "")
+        fd.append("isBestForYou", String(formData.isBestForYou))
+        fd.append("isPublished", String(formData.isPublished))
+
+        response = await fetch(url, {
+          method: "POST",
+          credentials: "include",
+          body: fd,
+        })
+      } else {
+        response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(formData),
+        })
+      }
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -70,7 +89,7 @@ const BlogEditPage = () => {
       }
 
       // Successfully saved, navigate back to list
-      navigate("/app/blog")
+      navigate("/blog")
     } catch (error: any) {
       console.error("Error saving post:", error)
       setError(error.message || "Failed to save post. Please try again.")
@@ -83,6 +102,15 @@ const BlogEditPage = () => {
   ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0]
+    if (file) {
+      setThumbnailFile(file)
+      // clear existing thumbnail URL when selecting new file
+      setFormData((prev) => ({ ...prev, thumbnail: "" }))
+    }
   }
 
   if (loading) {
@@ -141,20 +169,7 @@ const BlogEditPage = () => {
           </p>
         </div>
 
-        <div>
-          <Label htmlFor="description" className="mb-2">
-            Description *
-          </Label>
-          <Textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            rows={3}
-            required
-            placeholder="Brief description of the post"
-          />
-        </div>
+        {/* Description field removed — stored content is in `content` and thumbnail is used for images */}
 
         <div>
           <Label htmlFor="content" className="mb-2">
@@ -173,19 +188,24 @@ const BlogEditPage = () => {
 
         <div>
           <Label htmlFor="thumbnail" className="mb-2">
-            Thumbnail URL
+            Thumbnail (upload image)
           </Label>
-          <Input
+          <input
             id="thumbnail"
             name="thumbnail"
-            value={formData.thumbnail}
-            onChange={handleChange}
-            placeholder="https://example.com/image.jpg"
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
           />
-          {formData.thumbnail && (
+
+          {(thumbnailFile || formData.thumbnail) && (
             <div className="mt-2">
               <img
-                src={formData.thumbnail}
+                src={
+                  thumbnailFile
+                    ? URL.createObjectURL(thumbnailFile)
+                    : formData.thumbnail
+                }
                 alt="Thumbnail preview"
                 className="w-32 h-32 object-cover rounded border"
                 onError={(e) => {

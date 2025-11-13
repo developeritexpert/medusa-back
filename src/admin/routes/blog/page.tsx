@@ -75,7 +75,7 @@ const BlogPage = () => {
               )}
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{post.title}</h3>
-                <p className="text-gray-600 text-sm">{post.description}</p>
+                {/* Description removed; use excerpt from content if needed */}
                 <div className="mt-2 flex gap-2">
                   {post.isBestForYou && (
                     <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
